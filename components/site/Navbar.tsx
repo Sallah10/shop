@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { isAdmin } from "@/lib/admin";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getUser } from "@/lib/supabase/server";
 
@@ -8,6 +9,7 @@ import { UserMenu } from "./UserMenu";
 
 export async function Navbar() {
   const user = isSupabaseConfigured() ? await getUser() : null;
+  const admin = user ? await isAdmin() : false;
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/85 backdrop-blur">
@@ -30,6 +32,15 @@ export async function Navbar() {
           </Link>
 
           <CartButton />
+
+          {admin && (
+            <Link
+              href="/admin"
+              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 sm:block"
+            >
+              Admin
+            </Link>
+          )}
 
           {user ? (
             <UserMenu email={user.email ?? "Signed in"} />

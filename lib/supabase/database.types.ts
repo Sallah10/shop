@@ -26,6 +26,16 @@ export type ProductInsert = {
   created_at?: string;
 };
 
+export type Admin = {
+  user_id: string;
+  created_at: string;
+};
+
+export type AdminInsert = {
+  user_id: string;
+  created_at?: string;
+};
+
 export type Order = {
   id: string;
   user_id: string;
@@ -89,6 +99,12 @@ export type Database = {
         Row: OrderItem;
         Insert: OrderItemInsert;
         Update: Partial<OrderItemInsert>;
+        Relationships: [];
+      };
+      admins: {
+        Row: Admin;
+        Insert: AdminInsert;
+        Update: Partial<AdminInsert>;
         Relationships: [];
       };
     };
