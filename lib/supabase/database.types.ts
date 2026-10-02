@@ -108,7 +108,12 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: { [_ in never]: never };
+    Views: {
+      daily_revenue: {
+        Row: { day: string; orders: number; revenue: number };
+        Relationships: [];
+      };
+    };
     Functions: {
       apply_stock_purchase: {
         Args: { p_order_id: string; p_items: Json };

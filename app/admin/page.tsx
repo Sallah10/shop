@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { RevenueChart } from "@/components/admin/RevenueChart";
 import { ErrorNotice } from "@/components/ui/ErrorNotice";
-import { formatPrice, getErrorMessage } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
+import { getDailyRevenue } from "@/lib/orders";
 import { getProducts } from "@/lib/products";
 
 export const metadata: Metadata = {
@@ -14,11 +16,17 @@ export const dynamic = "force-dynamic";
 const LOW_STOCK_THRESHOLD = 5;
 
 export default async function AdminOverviewPage() {
-  let products;
-  try {
-    products = await getProducts();
-  } catch (error) {
-    return <ErrorNotice title="Could not load the catalog" message={getErrorMessage(error)} />;
+  const [products, revenue] = await Promise.all([
+    getProducts().catch(() => null),
+    getDailyRevenue().catch(() => null),
+  ]);
+
+  if (!products) {
+    return <ErrorNotice title="Could not load the catalog" message="Check the database and try again." />;
+  }
+
+  if (!revenue) {
+    return <ErrorNotice title="Could not load revenue" message="Re-run supabase/admin.sql to create the daily_revenue view." />;
   }
 
   const unitsInStock = products.reduce((sum, product) => sum + product.stock, 0);
@@ -40,6 +48,8 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="flex flex-col gap-8">
+
+
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Catalog at a glance</h2>
@@ -106,6 +116,14 @@ export default async function AdminOverviewPage() {
           </ul>
         </section>
       )}
+
+      <section>
+        <h2 className="text-lg font-semibold tracking-tight">Revenue</h2>
+
+        <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-5">
+          <RevenueChart data={revenue} />
+        </div>
+      </section>
     </div>
   );
 }

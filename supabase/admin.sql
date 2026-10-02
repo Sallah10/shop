@@ -98,6 +98,62 @@ create policy "admins can delete products"
   using (public.is_admin());
 
 -- -----------------------------------------------------------------------------
+-- Order reads
+--
+-- "users can read their own orders" from schema.sql is untouched: a customer
+-- still only ever sees their own rows. These two policies are the admin half,
+-- so the admin area can list orders and the chart below can aggregate them.
+-- -----------------------------------------------------------------------------
+
+drop policy if exists "admins can read all orders" on public.orders;
+create policy "admins can read all orders"
+  on public.orders
+  for select
+  to authenticated
+  using (public.is_admin());
+
+drop policy if exists "admins can read all order items" on public.order_items;
+create policy "admins can read all order items"
+  on public.order_items
+  for select
+  to authenticated
+  using (public.is_admin());
+
+-- schema.sql gives orders select and insert only, never update, so changing an
+-- order status needs a policy here. The action validates the status against a
+-- fixed list, so this only ever writes pending / paid / shipped / cancelled.
+drop policy if exists "admins can update orders" on public.orders;
+create policy "admins can update orders"
+  on public.orders
+  for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+-- -----------------------------------------------------------------------------
+-- daily_revenue
+--
+-- The admin chart needs a series, not every individual order, so the
+-- aggregation happens in Postgres rather than shipping rows to the app.
+--
+-- security_invoker is the important part: the view runs with the *caller's*
+-- permissions, so the policies above still apply. A customer querying this
+-- view gets zero rows, not a leak of everyone's orders. The old default
+-- (security_definer) would have exposed every order in the shop.
+-- -----------------------------------------------------------------------------
+
+create or replace view public.daily_revenue with (security_invoker = true) as
+  select
+    date_trunc('day', created_at) as day,
+    count(*)::integer            as orders,
+    coalesce(sum(total), 0)      as revenue
+  from public.orders
+  group by 1
+  order by 1;
+
+grant select on public.daily_revenue to authenticated;
+
+-- -----------------------------------------------------------------------------
 -- Product images
 --
 -- A public bucket, so next/image can fetch the photos without a signed URL.

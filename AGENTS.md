@@ -28,12 +28,15 @@ and order confirmation emails. Individual internship task.
 
 ## Database
 
-Tables: products, orders, order_items, admins. Users come from Supabase auth.
+Tables: products, orders, order_items, admins, daily_revenue (view).
+Users come from Supabase auth.
 
 - orders.user_id references auth.users
 - admins.user_id references auth.users
 - Row Level Security enabled on every table
 - Users can only read their own orders and order_items
+- Admins can read all orders and order items
+- daily_revenue is a security_invoker view, so RLS still applies to it
 - Products are readable by everyone; only rows in `admins` can write them
 - Admins are managed by hand in the SQL editor, never from the app
 

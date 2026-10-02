@@ -6,12 +6,18 @@ import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireAdmin } from "@/lib/admin";
+import { isOrderStatus, type OrderStatus } from "@/lib/order-status";
 import { getProductById } from "@/lib/products";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
 export type ProductFormState = {
   error: string | null;
+};
+
+export type OrderStatusState = {
+  error: string | null;
+  status: OrderStatus | null;
 };
 
 const BUCKET = "product-images";
@@ -242,4 +248,38 @@ export async function deleteProduct(
 
   revalidateProduct(id);
   redirect("/admin/products?deleted=1");
+}
+
+export async function updateOrderStatus(
+  _previousState: OrderStatusState,
+  formData: FormData,
+): Promise<OrderStatusState> {
+  await requireAdmin();
+
+  const id = String(formData.get("orderId") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+
+  if (!id) {
+    return { error: "That order could not be found.", status: null };
+  }
+
+  if (!isOrderStatus(status)) {
+    return { error: "That is not a status this shop uses.", status: null };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+
+  if (error) {
+    console.error(`Failed to update status for order ${id}`, error);
+
+    return {
+      error: "The status could not be saved. Reload the page and try again.",
+      status: null,
+    };
+  }
+
+  revalidatePath("/admin/orders");
+
+  return { error: null, status };
 }
