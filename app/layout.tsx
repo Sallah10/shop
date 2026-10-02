@@ -32,9 +32,18 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Northbound",
     locale: "en_US",
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1424,
+        height: 752,
+        alt: "Northbound, a small shop for well made everyday things",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    images: ["/og.jpg"],
   },
   robots: {
     index: true,

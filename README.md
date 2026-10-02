@@ -72,12 +72,19 @@ Orders work without Mailgun, the confirmation email just fails and gets logged.
 To turn emails on:
 
 1. Create an account at https://www.mailgun.com and verify your email.
-2. Go to **Sending → Domains** and either use the sandbox domain Mailgun gives
-   you for testing, or add a domain you own (for example `mg.example.com`).
-3. Mailgun shows a list of DNS records. Add them in the DNS provider where the
-   domain is hosted: one MX, one SPF TXT, one `email` CNAME and three DKIM
-   records. DNS changes can take up to an hour.
-4. Check what is still missing at any time:
+2. Go to **Sending → Domains**. Mailgun already gives you a free **sandbox
+   domain** (something like `sandbox1234.mailgun.org`) and it works straight
+   away, so you can start without owning a domain. To send from your own
+   address later, add a real domain here instead and change `MAILGUN_DOMAIN`
+   and `MAILGUN_FROM` to match.
+3. `MAILGUN_FROM` **must** use the same domain as `MAILGUN_DOMAIN`, otherwise
+   Mailgun rejects the sender. With a sandbox domain:
+   `MAILGUN_FROM=Northbound <no-reply@sandbox1234.mailgun.org>`.
+4. Sandbox domains can only send to **authorized recipients**. Open the domain
+   in Mailgun, find **Authorized addresses** and add every address you want to
+   send order confirmations to.
+5. For a real domain you must also add DNS records. Check what is missing at
+   any time:
 
    ```bash
    npm run mailgun:check -- mg.example.com
@@ -93,14 +100,15 @@ To turn emails on:
    ...
    ```
 
-5. Once the domain shows **Active**, go to **Sending → API keys → Private key**
-   and copy the `key-...` value.
-6. Put the three values in `.env.local`:
+   You need one MX, one SPF TXT, one `email` CNAME and three DKIM records.
+   DNS changes can take up to an hour.
+6. Copy the private key from **Sending → API keys → Private key** (it looks
+   like `key-...`) and put the three values in `.env.local`:
 
    ```env
    MAILGUN_API_KEY=key-...
-   MAILGUN_DOMAIN=mg.example.com
-   MAILGUN_FROM=Northbound <no-reply@mg.example.com>
+   MAILGUN_DOMAIN=sandbox1234.mailgun.org
+   MAILGUN_FROM=Northbound <no-reply@sandbox1234.mailgun.org>
    ```
 
 7. Test it without placing a real order:
@@ -109,10 +117,6 @@ To turn emails on:
    npm run email:test -- you@example.com
    ```
 
-Mailgun only lets you send from verified domains, and the sandbox domain is
-restricted to the address you signed up with. Add your real address as a
-recipient in **Sending → Domain settings → Authorized addresses** if you need
-to send anywhere else.
 
 ## 6. Run locally
 
@@ -140,8 +144,8 @@ npm run typecheck # tsc --noEmit
   canonical URL, plus JSON-LD `Product` structured data with price and stock.
 - Private pages set `robots: { index: false }`, so they never end up in search
   results.
-- `app/icon.svg` is the favicon, `app/opengraph-image.tsx` renders a 1200x630
-  social card on demand and picks a random product for it.
+- `app/icon.svg` is the favicon, `public/og.jpg` is the social card used for
+  Open Graph and Twitter previews (1200x630 is the ideal size).
 - Set `SITE_URL` in production so canonical links and the sitemap point at the
   real domain.
 
