@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ProductImage } from "@/components/products/ProductImage";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorNotice } from "@/components/ui/ErrorNotice";
+import { ProductResultToast } from "@/components/ui/toast/ProductResultToast";
 import { formatDate, formatPrice, getErrorMessage } from "@/lib/format";
 import { getProducts } from "@/lib/products";
 
@@ -23,6 +24,8 @@ export default async function AdminProductsPage() {
 
   return (
     <div>
+      <ProductResultToast />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight">
           Products

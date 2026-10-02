@@ -199,7 +199,7 @@ export async function saveProduct(
   }
 
   revalidateProduct(existing?.id);
-  redirect("/admin/products");
+  redirect(existing ? "/admin/products?saved=1" : "/admin/products?created=1");
 }
 
 export async function deleteProduct(
@@ -241,5 +241,5 @@ export async function deleteProduct(
   await removeStoredImage(supabase, existing.image_url);
 
   revalidateProduct(id);
-  redirect("/admin/products");
+  redirect("/admin/products?deleted=1");
 }

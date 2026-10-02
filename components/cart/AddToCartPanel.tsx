@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { QuantityInput } from "@/components/ui/QuantityInput";
+import { useToast } from "@/components/ui/toast/ToastProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/supabase/database.types";
 
@@ -11,6 +12,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const { addItem } = useCart();
+  const { toast } = useToast();
 
   const isSoldOut = product.stock <= 0;
   const maxQuantity = Math.max(Math.min(product.stock, 99), 1);
@@ -50,6 +52,12 @@ export function AddToCartPanel({ product }: { product: Product }) {
             quantity,
           );
           setIsAdded(true);
+          toast({
+            title: "Added to cart",
+            description:
+              quantity === 1 ? product.name : `${quantity} x ${product.name}`,
+            tone: "success",
+          });
         }}
         className="w-full rounded-lg bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400 sm:w-auto"
       >

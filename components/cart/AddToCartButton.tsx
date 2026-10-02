@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
+import { useToast } from "@/components/ui/toast/ToastProvider";
 
 type AddToCartButtonProps = {
   productId: string;
@@ -20,6 +21,7 @@ export function AddToCartButton({
   disabled = false,
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
+  const { toast } = useToast();
   const [justAdded, setJustAdded] = useState(false);
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function AddToCartButton({
       onClick={() => {
         addItem({ productId, name, price, imageUrl });
         setJustAdded(true);
+        toast({ title: "Added to cart", description: name, tone: "success" });
       }}
       className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400 ${
         justAdded

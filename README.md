@@ -28,7 +28,6 @@ cp .env.example .env.local   # Windows PowerShell: Copy-Item .env.example .env.l
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → Data API → Project URL | everything |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → Data API → anon public key | everything |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role | optional, admin scripts only, never exposed to the browser |
 | `MAILGUN_API_KEY` | Mailgun → Sending → API keys → Private key | order emails |
 | `MAILGUN_DOMAIN` | Mailgun → Sending → Sending domains, e.g. `mg.example.com` | order emails |
 | `MAILGUN_FROM` | e.g. `Northbound <no-reply@mg.example.com>` | order emails |
@@ -42,14 +41,20 @@ Only the two `NEXT_PUBLIC_*` variables reach the browser. Everything else is
 read on the server and must never be prefixed with `NEXT_PUBLIC_`.
 `.env.local` is gitignored, `.env.example` is committed.
 
+There is deliberately **no service role key**. The admin area writes with the
+anon key and Row Level Security rejects anything the caller is not allowed to
+do, so the database is the security boundary rather than a check in a server
+action. See [Admin area](#6-admin-area).
+
 ## 3. Create the database
 
 Open the Supabase project → **SQL Editor** → **New**, paste the whole
 `supabase/schema.sql` file and run it. That single file creates:
 
 - tables `products`, `orders`, `order_items`
-- Row Level Security on all three, plus the policies (products are public read
-  only, orders and order items are readable and insertable by their owner only)
+- Row Level Security on all three, plus the policies: products are readable by
+  everyone and writable by nobody, orders and order items are readable and
+  insertable by their owner only
 - `apply_stock_purchase()`, the function that decreases stock
 - 10 seeded products
 
@@ -117,8 +122,50 @@ To turn emails on:
    npm run email:test -- you@example.com
    ```
 
+## 6. Admin area
 
-## 6. Run locally
+The admin area at `/admin` manages the catalog: overview numbers, add, edit and
+delete products, and photo uploads to Supabase Storage.
+
+Run a second script in the SQL editor. Unlike `schema.sql` this one does not
+drop anything, so it is safe to re-run:
+
+```sql
+-- paste the whole supabase/admin.sql file
+```
+
+It creates:
+
+- table `admins`, an allow list of user ids, readable only by the signed in user
+  it belongs to
+- `is_admin()`, the helper the policies below use
+- insert / update / delete policies on `products`, allowed only when
+  `is_admin()` is true
+- the public `product-images` storage bucket, with upload, replace and delete
+  allowed only for admins
+
+Then make yourself an admin. Sign in to the shop with Google once, copy your id
+from **Authentication → Users**, then:
+
+```sql
+insert into public.admins (user_id) values ('PASTE-YOUR-USER-ID-HERE');
+```
+
+Sign out and back in. The **Admin** link appears in the navbar and `/admin` now
+loads. Anyone signed in who is *not* in the table gets a 404, so the admin area
+does not advertise itself to customers.
+
+To remove the admin flag:
+
+```sql
+delete from public.admins where user_id = 'PASTE-YOUR-USER-ID-HERE';
+```
+
+A product that already appears in an order cannot be deleted, because
+`order_items.product_id` is `ON DELETE RESTRICT`. The database refuses and the
+UI suggests setting the stock to 0 instead.
+
+## 7. Run locally
 
 ```bash
 npm run dev
@@ -136,7 +183,7 @@ npm run typecheck # tsc --noEmit
 ## SEO
 
 - `app/sitemap.ts` serves `/sitemap.xml` with the homepage, cart and every
-  product, `app/robots.ts` serves `/robots.txt` and blocks `/checkout`,
+  product, `app/robots.ts` serves `/robots.txt` and blocks `/admin`, `/checkout`,
   `/orders`, `/order-success/`, `/auth/` and `/api/` from crawlers.
 - `app/layout.tsx` sets `metadataBase`, the title template and Open Graph and
   Twitter card defaults.
@@ -166,19 +213,26 @@ Add the same environment variables in the Vercel project settings, then add
 app/
   (shop)/                  catalog, cart, checkout, order confirmation, order history
   actions/orders.ts        placeOrder server action (pricing, stock, inserts, email)
+  admin/                   admin overview, product list, new/edit product, server actions
   auth/callback/route.ts   exchanges the OAuth code for a session
   auth/login/              Google login button
   auth/actions.ts          logOut server action
   error.tsx                error boundary with a retry button
   not-found.tsx            404 page
-components/                cart context, product cards, checkout form, navbar, footer
+components/
+  admin/                   admin nav, product form, delete confirmation
+  cart/                    cart context, add to cart, cart view
+  ui/                      empty state, error notice, quantity, confirm dialog, toasts
 lib/
   supabase/                browser client, server client, session helper for proxy.ts, DB types
+  admin.ts                 isAdmin / requireAdmin guard
   products.ts orders.ts    data access
   mailgun.ts               Mailgun HTTP API + the confirmation email template
   env.ts format.ts         env guard, price and date formatting
 proxy.ts                   refreshes the Supabase session and guards protected routes
 supabase/schema.sql        tables, RLS policies, stock function, seed data
+supabase/admin.sql         admins allow list, product write policies, image bucket
+scripts/                   dev-only helpers: send a test email, check Mailgun DNS
 ```
 
 ### Cart
@@ -209,6 +263,15 @@ A failing email is logged and never fails the order.
 
 - Row Level Security is the real access control. The server never filters
   orders by user id to stay safe, the policies already do it.
+- Admin writes are authorised by the database too. `supabase/admin.sql` adds
+  insert / update / delete policies on `products` gated on `is_admin()`, so a
+  forged request with the anon key is rejected by Postgres even if the
+  `requireAdmin()` guard in the action were missing.
+- There is no service role key in the app, so there is no key that would turn a
+  bug into full write access to every table.
+- `public.admins` is insert / update / delete revoked for `anon` and
+  `authenticated`, so a stolen session cannot promote itself. Only the SQL
+  editor can add an admin.
 - Protected routes are checked twice: in `proxy.ts` for a fast redirect, and
   again inside the page and the server action.
 - `redirectTo` values coming back from the OAuth callback are sanitised, so

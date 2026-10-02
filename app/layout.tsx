@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { Footer } from "@/components/site/Footer";
 import { Navbar } from "@/components/site/Navbar";
+import { ToastProvider } from "@/components/ui/toast/ToastProvider";
 import { getSiteUrl } from "@/lib/site";
 
 import "./globals.css";
@@ -64,11 +65,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">
-        <CartProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </CartProvider>
+        <ToastProvider>
+          <CartProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </CartProvider>
+        </ToastProvider>
       </body>
     </html>
   );
