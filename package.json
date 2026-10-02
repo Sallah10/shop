@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "email:test": "node --conditions=react-server scripts/send-test-email.ts",
-    "mailgun:check": "node --conditions=react-server scripts/check-mailgun-domain.ts"
+    "email:test": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/send-test-email.ts",
+    "mailgun:check": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-mailgun-domain.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

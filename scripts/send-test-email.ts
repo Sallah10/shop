@@ -1,4 +1,7 @@
 import { sendEmail } from "../lib/mailgun.ts";
+import { loadProjectEnv } from "./load-env.ts";
+
+loadProjectEnv();
 
 const to = process.argv[2] ?? process.env.MAILGUN_TEST_RECIPIENT;
 

@@ -1,5 +1,9 @@
 import { resolveCname, resolveMx, resolveTxt } from "node:dns/promises";
 
+import { loadProjectEnv } from "./load-env.ts";
+
+loadProjectEnv();
+
 const domain = process.argv[2] ?? process.env.MAILGUN_DOMAIN;
 
 if (!domain) {

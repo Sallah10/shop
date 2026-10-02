@@ -10,7 +10,8 @@ export function CartButton() {
   return (
     <Link
       href="/cart"
-      className="relative inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+      aria-label="Cart"
+      className="relative inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 sm:px-3"
     >
       <CartIcon />
       <span className="hidden sm:inline">Cart</span>
