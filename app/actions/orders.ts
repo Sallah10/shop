@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
+import { sendOrderConfirmationEmail } from "@/lib/mailgun";
 import { getProductsByIds } from "@/lib/products";
 import { createClient } from "@/lib/supabase/server";
 
@@ -93,6 +95,7 @@ export async function placeOrder(
   const productsById = new Map(products.map((product) => [product.id, product]));
 
   const items: PricedItem[] = [];
+  const emailItems: { name: string; quantity: number; unitPrice: number }[] = [];
 
   for (const [productId, quantity] of requested) {
     const product = productsById.get(productId);
@@ -113,6 +116,7 @@ export async function placeOrder(
     }
 
     items.push({ product_id: product.id, quantity, unit_price: product.price });
+    emailItems.push({ name: product.name, quantity, unitPrice: product.price });
   }
 
   const total = Number(
@@ -161,6 +165,21 @@ export async function placeOrder(
   if (stockError) {
     console.error(`Failed to update stock for order ${order.id}`, stockError);
   }
+
+  after(async () => {
+    try {
+      await sendOrderConfirmationEmail({
+        orderId: order.id,
+        customerName,
+        customerEmail,
+        shippingAddress,
+        total,
+        items: emailItems,
+      });
+    } catch (error) {
+      console.error(`Failed to send confirmation email for order ${order.id}`, error);
+    }
+  });
 
   revalidatePath("/orders");
   redirect(`/order-success/${order.id}`);
