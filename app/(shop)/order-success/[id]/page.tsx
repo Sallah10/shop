@@ -12,6 +12,7 @@ import { getOrderWithItems } from "@/lib/orders";
 
 export const metadata: Metadata = {
   title: "Order confirmed",
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";

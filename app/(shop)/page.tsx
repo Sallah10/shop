@@ -9,6 +9,9 @@ import { getProducts } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "Shop",
+  description:
+    "Browse the full Northbound catalog: cookware, tableware, linen bedding, lighting and small everyday objects.",
+  alternates: { canonical: "/" },
 };
 
 export const dynamic = "force-dynamic";

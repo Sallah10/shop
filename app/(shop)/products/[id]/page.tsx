@@ -10,6 +10,7 @@ import { SetupNotice } from "@/components/ui/SetupNotice";
 import { isSupabaseConfigured } from "@/lib/env";
 import { formatPrice, getErrorMessage } from "@/lib/format";
 import { getProductById, getRelatedProducts } from "@/lib/products";
+import { getSiteUrl } from "@/lib/site";
 import type { Product } from "@/lib/supabase/database.types";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,27 @@ export async function generateMetadata({
   try {
     const product = await getProductById((await params).id);
 
-    return { title: product?.name ?? "Product not found" };
+    if (!product) {
+      return { title: "Product not found", robots: { index: false, follow: false } };
+    }
+
+    return {
+      title: product.name,
+      description: product.description.slice(0, 155),
+      alternates: { canonical: `/products/${product.id}` },
+      openGraph: {
+        type: "website",
+        title: `${product.name} | Northbound`,
+        description: product.description.slice(0, 155),
+        images: product.image_url ? [{ url: product.image_url, alt: product.name }] : undefined,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: product.name,
+        description: product.description.slice(0, 155),
+        images: product.image_url ? [product.image_url] : undefined,
+      },
+    };
   } catch {
     return { title: "Product" };
   }
@@ -73,6 +94,30 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
       >
         &larr; All products
       </Link>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.name,
+            description: product.description,
+            image: product.image_url ? [product.image_url] : undefined,
+            sku: product.id,
+            brand: { "@type": "Brand", name: "Northbound" },
+            offers: {
+              "@type": "Offer",
+              price: product.price.toFixed(2),
+              priceCurrency: "USD",
+              availability: isSoldOut
+                ? "https://schema.org/OutOfStock"
+                : "https://schema.org/InStock",
+              url: `${getSiteUrl()}/products/${product.id}`,
+            },
+          }),
+        }}
+      />
 
       <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
         <div className="relative aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white">

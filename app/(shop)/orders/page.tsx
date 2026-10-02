@@ -12,6 +12,7 @@ import { getUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Your orders",
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";

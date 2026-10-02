@@ -32,6 +32,11 @@ cp .env.example .env.local   # Windows PowerShell: Copy-Item .env.example .env.l
 | `MAILGUN_API_KEY` | Mailgun → Sending → API keys → Private key | order emails |
 | `MAILGUN_DOMAIN` | Mailgun → Sending → Sending domains, e.g. `mg.example.com` | order emails |
 | `MAILGUN_FROM` | e.g. `Northbound <no-reply@mg.example.com>` | order emails |
+| `SITE_URL` | the public URL, e.g. `https://shop.vercel.app` | canonical links, sitemap, structured data |
+
+`SITE_URL` has no `NEXT_PUBLIC_` prefix on purpose: it is only read on the
+server. On Vercel it is picked up automatically from the project URL, so you
+only need it locally.
 
 Only the two `NEXT_PUBLIC_*` variables reach the browser. Everything else is
 read on the server and must never be prefixed with `NEXT_PUBLIC_`.
@@ -61,7 +66,55 @@ accept losing the existing shop data).
    - **Redirect URLs**: `http://localhost:3000/auth/callback` and
      `https://<your-vercel-domain>/auth/callback`
 
-## 5. Run locally
+## 5. Mailgun setup
+
+Orders work without Mailgun, the confirmation email just fails and gets logged.
+To turn emails on:
+
+1. Create an account at https://www.mailgun.com and verify your email.
+2. Go to **Sending → Domains** and either use the sandbox domain Mailgun gives
+   you for testing, or add a domain you own (for example `mg.example.com`).
+3. Mailgun shows a list of DNS records. Add them in the DNS provider where the
+   domain is hosted: one MX, one SPF TXT, one `email` CNAME and three DKIM
+   records. DNS changes can take up to an hour.
+4. Check what is still missing at any time:
+
+   ```bash
+   npm run mailgun:check -- mg.example.com
+   ```
+
+   ```
+   Checking Mailgun DNS records for mg.example.com
+
+   OK       MX    mg.example.com
+   OK       TXT   mg.example.com
+   OK       CNAME email.mg.example.com
+   OK       TXT   k1._domainkey.mg.example.com
+   ...
+   ```
+
+5. Once the domain shows **Active**, go to **Sending → API keys → Private key**
+   and copy the `key-...` value.
+6. Put the three values in `.env.local`:
+
+   ```env
+   MAILGUN_API_KEY=key-...
+   MAILGUN_DOMAIN=mg.example.com
+   MAILGUN_FROM=Northbound <no-reply@mg.example.com>
+   ```
+
+7. Test it without placing a real order:
+
+   ```bash
+   npm run email:test -- you@example.com
+   ```
+
+Mailgun only lets you send from verified domains, and the sandbox domain is
+restricted to the address you signed up with. Add your real address as a
+recipient in **Sending → Domain settings → Authorized addresses** if you need
+to send anywhere else.
+
+## 6. Run locally
 
 ```bash
 npm run dev
@@ -70,10 +123,27 @@ npm run dev
 Open http://localhost:3000.
 
 ```bash
-npm run build   # production build
-npm run start   # serve the production build
-npm run lint    # eslint
+npm run build     # production build
+npm run start     # serve the production build
+npm run lint      # eslint
+npm run typecheck # tsc --noEmit
 ```
+
+## SEO
+
+- `app/sitemap.ts` serves `/sitemap.xml` with the homepage, cart and every
+  product, `app/robots.ts` serves `/robots.txt` and blocks `/checkout`,
+  `/orders`, `/order-success/`, `/auth/` and `/api/` from crawlers.
+- `app/layout.tsx` sets `metadataBase`, the title template and Open Graph and
+  Twitter card defaults.
+- Product pages generate their own title, description, social image and
+  canonical URL, plus JSON-LD `Product` structured data with price and stock.
+- Private pages set `robots: { index: false }`, so they never end up in search
+  results.
+- `app/icon.svg` is the favicon, `app/opengraph-image.tsx` renders a 1200x630
+  social card on demand and picks a random product for it.
+- Set `SITE_URL` in production so canonical links and the sitemap point at the
+  real domain.
 
 ## Deploying to Vercel
 
